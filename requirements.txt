@@ -1,3 +1,5 @@
 Flask
 aiogram
 openai
+python-dotenv
+

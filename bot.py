@@ -6,7 +6,9 @@ import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
 from openai import AsyncOpenAI
+from dotenv import load_dotenv
 
+load_dotenv() 
 
 logging.basicConfig(level=logging.INFO)
 
