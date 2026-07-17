@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд Глаз - Фактчекинг</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Проект «Глаз» — Дашборд фактчекера</h1>
+        <p class="subtitle">Мониторинг пользовательских сообщений и результаты анализа на дезинформацию.</p>
+        
+        <main class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Время</th>
+                        <th style="width: 30%">Текст от пользователя</th>
+                        <th>Статус</th>
+                        <th>Доверие (%)</th>
+                        <th style="width: 35%">Объяснение AI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in checks %}
+                    <tr>
+                        <td style="color: var(--text-secondary);">#{{ check.id }}</td>
+                        <td style="color: var(--text-secondary); font-size: 14px;">{{ check.timestamp }}</td>
+                        <td style="font-weight: 500; line-height: 1.5;">{{ check.content }}</td>
+                        <td>
+                            {% if check.is_fake %}
+                                <span class="status-badge status-fake">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                                    Фейк
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-true">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                                    Правда
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ check.trust_score }}</strong></td>
+                        <td style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">{{ check.explanation }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty-state">
+                                <h3>Данных пока нет</h3>
+                                <p>Запустите Telegram-бота и отправьте первый текст на проверку!</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </main>
+    </div>
+</body>
+</html>
