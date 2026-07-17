@@ -2,4 +2,6 @@ Flask
 aiogram
 google-generativeai
 python-dotenv
+aiohttp
+Pillow
 

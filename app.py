@@ -1,6 +1,8 @@
 import sqlite3
-from flask import Flask, render_template
+from flask import Flask, render_template, send_file
 import os
+import io
+from PIL import Image
 
 app = Flask(__name__)
 DB_NAME = "hackathon.db"
@@ -32,19 +34,37 @@ def get_latest_checks():
             conn.close()
 
 @app.route('/')
-def index():
-    """
-    Главная страница (дашборд).
-    Извлекает данные из БД и рендерит HTML-шаблон.
-    """
+def dashboard():
     checks = get_latest_checks()
     return render_template('index.html', checks=checks)
 
-if __name__ == '__main__':
-    print("\n" + "="*60)
-    print("🚀 Flask сервер 'Көз' запущен!")
-    print("👉 Откройте http://127.0.0.1:5000 в браузере для просмотра дашборда.")
-    print("💡 ВАЖНО: Запустите bot.py в ДРУГОМ терминале для приема сообщений.")
-    print("="*60 + "\n")
+@app.route('/image/<filename>')
+def serve_image(filename):
+    filepath = os.path.join("static", "uploads", filename)
+    if not os.path.exists(filepath):
+        return "Image not found", 404
     
-    app.run(debug=True)
+    try:
+        # Открываем изображение через Pillow
+        img = Image.open(filepath)
+        
+        # Конвертируем в RGB если нужно (чтобы избежать проблем при сохранении JPEG)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+            
+        # Создаем миниатюру для оптимизации загрузки дашборда
+        img.thumbnail((400, 400))
+        
+        # Сохраняем во временный буфер в оперативной памяти
+        img_io = io.BytesIO()
+        img.save(img_io, 'JPEG', quality=85)
+        img_io.seek(0)
+        
+        return send_file(img_io, mimetype='image/jpeg')
+    except Exception as e:
+        print(f"Error processing image with PIL: {e}")
+        return "Error processing image", 500
+
+if __name__ == '__main__':
+    # Включаем debug=True для удобства разработки
+    app.run(debug=True, host='0.0.0.0', port=5000)

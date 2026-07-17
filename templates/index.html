@@ -28,7 +28,13 @@
                     <tr>
                         <td style="color: var(--text-secondary);">#{{ check.id }}</td>
                         <td style="color: var(--text-secondary); font-size: 14px;">{{ check.timestamp }}</td>
-                        <td style="font-weight: 500; line-height: 1.5;">{{ check.content }}</td>
+                        <td style="font-weight: 500; line-height: 1.5;">
+                            {% if check.content.startswith('IMAGE:') %}
+                                <img src="/image/{{ check.content[6:] }}" alt="User Image" style="max-width: 150px; border-radius: 8px;">
+                            {% else %}
+                                {{ check.content }}
+                            {% endif %}
+                        </td>
                         <td>
                             {% if check.is_fake %}
                                 <span class="status-badge status-fake">
