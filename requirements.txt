@@ -1,5 +1,5 @@
 Flask
 aiogram
-openai
+google-generativeai
 python-dotenv
 
