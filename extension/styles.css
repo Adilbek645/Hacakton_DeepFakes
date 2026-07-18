@@ -1,0 +1,72 @@
+/* Стили для подсветки триггеров */
+.emo-filter-fake {
+  background-color: rgba(255, 235, 59, 0.4) !important;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background-color 0.3s;
+}
+
+.emo-filter-aggression {
+  background-color: rgba(244, 67, 54, 0.4) !important;
+  border-radius: 3px;
+  padding: 0 2px;
+  transition: background-color 0.3s;
+}
+
+/* Стили для плавающих эмодзи */
+.emo-filter-emoji {
+  position: absolute;
+  font-size: 24px;
+  pointer-events: none; /* чтобы смайлик не мешал кликать по тексту */
+  z-index: 999999;
+  opacity: 0;
+  animation: floatUpAndFade 4s ease-out forwards;
+}
+
+@keyframes floatUpAndFade {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.5);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-5px) scale(1.2);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-10px) scale(1);
+  }
+  80% {
+    opacity: 0.8;
+    transform: translateY(-20px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.8);
+  }
+}
+
+/* Стили для всплывающей подсказки (Tooltip) */
+.emo-filter-tooltip {
+  position: absolute;
+  background-color: #333;
+  color: #fff;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  max-width: 300px;
+  z-index: 9999999;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  font-family: Arial, sans-serif;
+  line-height: 1.4;
+}
+
+.emo-filter-fake:hover + .emo-filter-tooltip,
+.emo-filter-aggression:hover + .emo-filter-tooltip,
+.emo-filter-fake:hover .emo-filter-tooltip,
+.emo-filter-aggression:hover .emo-filter-tooltip {
+    opacity: 1;
+}

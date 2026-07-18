@@ -4,4 +4,4 @@ google-generativeai
 python-dotenv
 aiohttp
 Pillow
-
+flask-cors
