@@ -209,6 +209,105 @@ async def handle_photo_message(message: types.Message):
         logging.error(f"Ошибка при обработке фото Sightengine: {e}")
         await processing_msg.edit_text("❌ Произошла ошибка при анализе фотографии. Пожалуйста, проверьте ключи доступа или попробуйте позже.")
 
+@dp.message(F.video)
+async def handle_video_message(message: types.Message):
+    """Хэндлер для проверки видео пользователя через Sightengine API"""
+    user_id = message.from_user.id
+    
+    if message.video.file_size > 20 * 1024 * 1024:
+        await message.answer("❌ Размер видео превышает 20 МБ. Бот не может скачивать файлы такого размера из-за ограничений Telegram.")
+        return
+        
+    processing_msg = await message.answer("🎥 Сканирую видео кадр за кадром через нейросеть Sightengine... Пожалуйста, подождите. Это может занять до минуты.")
+    
+    try:
+        # Получаем видео
+        file_info = await bot.get_file(message.video.file_id)
+        downloaded_file = await bot.download_file(file_info.file_path)
+        video_bytes = downloaded_file.read()
+        
+        # Сохранение на диск
+        import time
+        os.makedirs(os.path.join("static", "uploads"), exist_ok=True)
+        filename = f"{user_id}_{int(time.time())}.mp4"
+        filepath = os.path.join("static", "uploads", filename)
+        with open(filepath, "wb") as f:
+            f.write(video_bytes)
+        
+        # Подготовка данных для Sightengine (Синхронный API для видео)
+        data = aiohttp.FormData()
+        data.add_field('models', 'genai,deepfake')
+        data.add_field('api_user', SIGHTENGINE_API_USER)
+        data.add_field('api_secret', SIGHTENGINE_API_SECRET)
+        data.add_field('media', video_bytes, filename='video.mp4', content_type='video/mp4')
+        
+        # Вызов Sightengine API
+        async with aiohttp.ClientSession() as session:
+            async with session.post('https://api.sightengine.com/1.0/video/check-sync.json', data=data) as resp:
+                result_data = await resp.json()
+                
+                if result_data.get("status") != "success":
+                    error_msg = result_data.get("error", {}).get("message", "Unknown API error")
+                    raise Exception(f"Sightengine API Error: {error_msg}")
+        
+        # Парсинг ответа (Sightengine возвращает массив frames для видео)
+        frames = result_data.get("data", {}).get("frames", [])
+        
+        max_ai_prob = 0.0
+        max_deepfake_prob = 0.0
+        
+        for frame in frames:
+            frame_ai = frame.get("type", {}).get("ai_generated", 0.0)
+            frame_df = frame.get("type", {}).get("deepfake", 0.0)
+            max_ai_prob = max(max_ai_prob, frame_ai)
+            max_deepfake_prob = max(max_deepfake_prob, frame_df)
+        
+        ai_percent = int(max_ai_prob * 100)
+        deepfake_percent = int(max_deepfake_prob * 100)
+        
+        max_prob = max(max_ai_prob, max_deepfake_prob)
+        
+        # Конвертация в наш trust_score
+        trust_score = int((1.0 - max_prob) * 100)
+        is_fake = trust_score < 50
+        
+        # Формирование ответа
+        if trust_score >= 80:
+            status_emoji = "🟢 ПРАВДА (Оригинал)"
+            explanation = "Нейросети уверены, что это подлинное видео, без следов генерации ИИ или подмены лица."
+        elif trust_score >= 50:
+            status_emoji = "🟡 ВЕРОЯТНО ОРИГИНАЛ / НЕОДНОЗНАЧНО"
+            explanation = "Модели склоняются к тому, что видео настоящее, но есть подозрительные кадры."
+        elif trust_score >= 20:
+            status_emoji = "🟠 ПОДОЗРЕНИЕ НА МАНИПУЛЯЦИЮ"
+            if max_ai_prob > max_deepfake_prob:
+                explanation = "В видео обнаружены кадры с серьезными признаками ИИ-генерации."
+            else:
+                explanation = "В видео обнаружены кадры с серьезными признаками дипфейка или фотомонтажа лица."
+        else:
+            status_emoji = "🔴 ФЕЙК / МАНИПУЛЯЦИЯ"
+            if max_ai_prob > max_deepfake_prob:
+                explanation = "С высокой вероятностью это полностью сгенерированное ИИ видео."
+            else:
+                explanation = "С высокой вероятностью это глубокий дипфейк (видео с подменой лица)."
+            
+        # Сохранение в БД
+        save_check_to_db(user_id, f"VIDEO:{filename}", is_fake, trust_score, explanation)
+            
+        reply_text = (
+            f"**Вердикт по видео:** {status_emoji}\n"
+            f"**Уровень доверия:** {trust_score}%\n\n"
+            f"🤖 **ИИ-генерация:** {ai_percent}% вероятность на худшем кадре\n"
+            f"🎭 **Дипфейк (лица):** {deepfake_percent}% вероятность на худшем кадре\n\n"
+            f"💡 **Анализ:** {explanation}"
+        )
+        
+        await processing_msg.edit_text(reply_text, parse_mode="Markdown")
+        
+    except Exception as e:
+        logging.error(f"Ошибка при обработке видео Sightengine: {e}")
+        await processing_msg.edit_text("❌ Произошла ошибка при анализе видео. Возможно, сервер перегружен.")
+
 async def main():
     print("\n" + "="*60)
     print("🤖 Telegram-бот 'Глаз' успешно запущен!")

@@ -30,7 +30,9 @@
                         <td style="color: var(--text-secondary); font-size: 14px;">{{ check.timestamp }}</td>
                         <td style="font-weight: 500; line-height: 1.5;">
                             {% if check.content.startswith('IMAGE:') %}
-                                <img src="/image/{{ check.content[6:] }}" alt="User Image" style="max-width: 150px; border-radius: 8px;">
+                                <img src="/media/{{ check.content[6:] }}" alt="User Image" style="max-width: 150px; border-radius: 8px;">
+                            {% elif check.content.startswith('VIDEO:') %}
+                                <video controls src="/media/{{ check.content[6:] }}" style="max-width: 150px; border-radius: 8px;"></video>
                             {% else %}
                                 {{ check.content }}
                             {% endif %}

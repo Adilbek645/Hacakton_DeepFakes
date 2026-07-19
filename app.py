@@ -90,11 +90,15 @@ def dashboard():
     checks = get_latest_checks()
     return render_template('index.html', checks=checks)
 
-@app.route('/image/<filename>')
-def serve_image(filename):
+@app.route('/media/<filename>')
+def serve_media(filename):
     filepath = os.path.join("static", "uploads", filename)
     if not os.path.exists(filepath):
-        return "Image not found", 404
+        return "Media not found", 404
+    
+    # Если это видео, отдаем его напрямую, в обход Pillow
+    if filename.lower().endswith('.mp4'):
+        return send_file(filepath, mimetype='video/mp4')
     
     try:
         # Открываем изображение через Pillow
@@ -114,8 +118,8 @@ def serve_image(filename):
         
         return send_file(img_io, mimetype='image/jpeg')
     except Exception as e:
-        print(f"Error processing image with PIL: {e}")
-        return "Error processing image", 500
+        print(f"Error processing media with PIL: {e}")
+        return "Error processing media", 500
 
 @app.route('/api/analyze', methods=['POST', 'OPTIONS'])
 def analyze_text():
