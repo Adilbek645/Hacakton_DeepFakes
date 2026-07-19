@@ -42,7 +42,8 @@ model = genai.GenerativeModel(
         "ТВОЙ ОТВЕТ ДОЛЖЕН БЫТЬ СТРОГО В ФОРМАТЕ JSON. "
         "Формат ответа: {\"trust_score\": <от 0 до 100>, \"is_fake\": <true/false>, "
         "\"explanation\": \"<Краткое объяснение на русском или казахском, "
-        "почему это фейк или правда, макс 2 предложения>\"}"
+        "почему это фейк или правда, макс 2 предложения>\", "
+        "\"search_query\": \"<Оптимальный поисковый запрос для Google, чтобы пользователь мог сам найти первоисточник или опровержение этой новости>\"}"
     )
 )
 
@@ -69,9 +70,9 @@ def save_check_to_db(user_id: int, content: str, is_fake: bool, trust_score: int
 async def cmd_start(message: types.Message):
     """Хэндлер для команды /start"""
     welcome_text = (
-        "Привет! 👋 Я — фактчекер проекта «Глаз».\n\n"
-        "Отправьте мне любую сомнительную новость (текст), и я проверю её на дезинформацию через Gemini.\n"
-        "Или отправьте мне фотографию, и я проверю её на дипфейк с помощью Sightengine AI!"
+        "Привет! 👋 Я — фактчекер проекта «AuraChecker».\n\n"
+        "Отправьте мне любую сомнительную новость (текст), и я проверю её на дезинформацию.\n"
+        "Или отправьте мне фотографию, и я проверю её на дипфейк!"
     )
     await message.answer(welcome_text)
 
@@ -81,7 +82,7 @@ async def handle_text_message(message: types.Message):
     user_text = message.text
     user_id = message.from_user.id
     
-    processing_msg = await message.answer("🔍 Анализирую текст с помощью Gemini... Пожалуйста, подождите.")
+    processing_msg = await message.answer("🔍 Анализирую текст... Пожалуйста, подождите.")
     
     try:
         # Вызов Gemini API
@@ -94,6 +95,7 @@ async def handle_text_message(message: types.Message):
         trust_score = result_data.get("trust_score", 0)
         is_fake = result_data.get("is_fake", True)
         explanation = result_data.get("explanation", "Не удалось сформировать объяснение.")
+        search_query = result_data.get("search_query", "")
         
         # Сохранение в БД
         save_check_to_db(user_id, user_text, is_fake, trust_score, explanation)
@@ -114,18 +116,22 @@ async def handle_text_message(message: types.Message):
             f"💡 **Объяснение:** {explanation}"
         )
         
-        await processing_msg.edit_text(reply_text, parse_mode="Markdown")
+        if search_query:
+            import urllib.parse
+            search_url = f"https://www.google.com/search?q={urllib.parse.quote(search_query)}"
+            reply_text += f"\n\n🔍 **[Найти первоисточник и пруфы в Google]({search_url})**"
+        
+        await processing_msg.edit_text(reply_text, parse_mode="Markdown", disable_web_page_preview=True)
         
     except Exception as e:
         logging.error(f"Ошибка при обработке запроса Gemini: {e}")
-        await processing_msg.edit_text("❌ Произошла ошибка при анализе текста. Возможно, вы превысили лимит (429). Подождите 1 минуту.")
+        await processing_msg.edit_text("❌ Произошла ошибка при анализе текста.")
 
 @dp.message(F.photo)
 async def handle_photo_message(message: types.Message):
-    """Хэндлер для проверки фотографий пользователя через Sightengine API"""
     user_id = message.from_user.id
     
-    processing_msg = await message.answer("🖼️ Сканирую изображение через нейросеть Sightengine... Пожалуйста, подождите.")
+    processing_msg = await message.answer("🖼️ Сканирую изображение... Пожалуйста, подождите.")
     
     try:
         # Получаем фото в лучшем качестве
@@ -207,114 +213,9 @@ async def handle_photo_message(message: types.Message):
         
     except Exception as e:
         logging.error(f"Ошибка при обработке фото Sightengine: {e}")
-        await processing_msg.edit_text("❌ Произошла ошибка при анализе фотографии. Пожалуйста, проверьте ключи доступа или попробуйте позже.")
-
-@dp.message(F.video)
-async def handle_video_message(message: types.Message):
-    """Хэндлер для проверки видео пользователя через Sightengine API"""
-    user_id = message.from_user.id
-    
-    if message.video.file_size > 20 * 1024 * 1024:
-        await message.answer("❌ Размер видео превышает 20 МБ. Бот не может скачивать файлы такого размера из-за ограничений Telegram.")
-        return
-        
-    processing_msg = await message.answer("🎥 Сканирую видео кадр за кадром через нейросеть Sightengine... Пожалуйста, подождите. Это может занять до минуты.")
-    
-    try:
-        # Получаем видео
-        file_info = await bot.get_file(message.video.file_id)
-        downloaded_file = await bot.download_file(file_info.file_path)
-        video_bytes = downloaded_file.read()
-        
-        # Сохранение на диск
-        import time
-        os.makedirs(os.path.join("static", "uploads"), exist_ok=True)
-        filename = f"{user_id}_{int(time.time())}.mp4"
-        filepath = os.path.join("static", "uploads", filename)
-        with open(filepath, "wb") as f:
-            f.write(video_bytes)
-        
-        # Подготовка данных для Sightengine (Синхронный API для видео)
-        data = aiohttp.FormData()
-        data.add_field('models', 'genai,deepfake')
-        data.add_field('api_user', SIGHTENGINE_API_USER)
-        data.add_field('api_secret', SIGHTENGINE_API_SECRET)
-        data.add_field('media', video_bytes, filename='video.mp4', content_type='video/mp4')
-        
-        # Вызов Sightengine API
-        async with aiohttp.ClientSession() as session:
-            async with session.post('https://api.sightengine.com/1.0/video/check-sync.json', data=data) as resp:
-                result_data = await resp.json()
-                
-                if result_data.get("status") != "success":
-                    error_msg = result_data.get("error", {}).get("message", "Unknown API error")
-                    raise Exception(f"Sightengine API Error: {error_msg}")
-        
-        # Парсинг ответа (Sightengine возвращает массив frames для видео)
-        frames = result_data.get("data", {}).get("frames", [])
-        
-        max_ai_prob = 0.0
-        max_deepfake_prob = 0.0
-        
-        for frame in frames:
-            frame_ai = frame.get("type", {}).get("ai_generated", 0.0)
-            frame_df = frame.get("type", {}).get("deepfake", 0.0)
-            max_ai_prob = max(max_ai_prob, frame_ai)
-            max_deepfake_prob = max(max_deepfake_prob, frame_df)
-        
-        ai_percent = int(max_ai_prob * 100)
-        deepfake_percent = int(max_deepfake_prob * 100)
-        
-        max_prob = max(max_ai_prob, max_deepfake_prob)
-        
-        # Конвертация в наш trust_score
-        trust_score = int((1.0 - max_prob) * 100)
-        is_fake = trust_score < 50
-        
-        # Формирование ответа
-        if trust_score >= 80:
-            status_emoji = "🟢 ПРАВДА (Оригинал)"
-            explanation = "Нейросети уверены, что это подлинное видео, без следов генерации ИИ или подмены лица."
-        elif trust_score >= 50:
-            status_emoji = "🟡 ВЕРОЯТНО ОРИГИНАЛ / НЕОДНОЗНАЧНО"
-            explanation = "Модели склоняются к тому, что видео настоящее, но есть подозрительные кадры."
-        elif trust_score >= 20:
-            status_emoji = "🟠 ПОДОЗРЕНИЕ НА МАНИПУЛЯЦИЮ"
-            if max_ai_prob > max_deepfake_prob:
-                explanation = "В видео обнаружены кадры с серьезными признаками ИИ-генерации."
-            else:
-                explanation = "В видео обнаружены кадры с серьезными признаками дипфейка или фотомонтажа лица."
-        else:
-            status_emoji = "🔴 ФЕЙК / МАНИПУЛЯЦИЯ"
-            if max_ai_prob > max_deepfake_prob:
-                explanation = "С высокой вероятностью это полностью сгенерированное ИИ видео."
-            else:
-                explanation = "С высокой вероятностью это глубокий дипфейк (видео с подменой лица)."
-            
-        # Сохранение в БД
-        save_check_to_db(user_id, f"VIDEO:{filename}", is_fake, trust_score, explanation)
-            
-        reply_text = (
-            f"**Вердикт по видео:** {status_emoji}\n"
-            f"**Уровень доверия:** {trust_score}%\n\n"
-            f"🤖 **ИИ-генерация:** {ai_percent}% вероятность на худшем кадре\n"
-            f"🎭 **Дипфейк (лица):** {deepfake_percent}% вероятность на худшем кадре\n\n"
-            f"💡 **Анализ:** {explanation}"
-        )
-        
-        await processing_msg.edit_text(reply_text, parse_mode="Markdown")
-        
-    except Exception as e:
-        logging.error(f"Ошибка при обработке видео Sightengine: {e}")
-        await processing_msg.edit_text("❌ Произошла ошибка при анализе видео. Возможно, сервер перегружен.")
+        await processing_msg.edit_text("❌ Произошла ошибка при анализе фотографии.")
 
 async def main():
-    print("\n" + "="*60)
-    print("🤖 Telegram-бот 'Глаз' успешно запущен!")
-    print("🧠 Используемые API: Gemini 2.5 (Текст) + Sightengine (Фото)")
-    print("💡 Убедитесь, что Flask сервер (app.py) также запущен для дашборда.")
-    print("="*60 + "\n")
-    
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

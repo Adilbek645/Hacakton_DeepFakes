@@ -28,11 +28,22 @@ body {
     padding: 40px 20px;
 }
 
-h1 {
-    font-size: 32px;
-    font-weight: 700;
+.aura-title {
+    font-size: 38px;
+    font-weight: 800;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
+    background: linear-gradient(90deg, #8a2be2, #ff007f, #8a2be2);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shine 3s linear infinite;
+}
+
+@keyframes shine {
+    to {
+        background-position: 200% center;
+    }
 }
 
 .subtitle {

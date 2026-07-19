@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Дашборд Глаз - Фактчекинг</title>
+    <title>AuraChecker Дашборд 🌟</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1>Проект «Глаз» — Дашборд фактчекера</h1>
-        <p class="subtitle">Мониторинг пользовательских сообщений и результаты анализа на дезинформацию.</p>
+        <h1 class="aura-title">✨ AuraChecker</h1>
+        <p class="subtitle">Мониторинг пользовательской ауры</p>
         
         <main class="table-container">
             <table>
@@ -31,8 +31,6 @@
                         <td style="font-weight: 500; line-height: 1.5;">
                             {% if check.content.startswith('IMAGE:') %}
                                 <img src="/media/{{ check.content[6:] }}" alt="User Image" style="max-width: 150px; border-radius: 8px;">
-                            {% elif check.content.startswith('VIDEO:') %}
-                                <video controls src="/media/{{ check.content[6:] }}" style="max-width: 150px; border-radius: 8px;"></video>
                             {% else %}
                                 {{ check.content }}
                             {% endif %}

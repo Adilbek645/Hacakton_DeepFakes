@@ -96,10 +96,6 @@ def serve_media(filename):
     if not os.path.exists(filepath):
         return "Media not found", 404
     
-    # Если это видео, отдаем его напрямую, в обход Pillow
-    if filename.lower().endswith('.mp4'):
-        return send_file(filepath, mimetype='video/mp4')
-    
     try:
         # Открываем изображение через Pillow
         img = Image.open(filepath)
