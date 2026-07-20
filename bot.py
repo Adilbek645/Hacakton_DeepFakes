@@ -70,11 +70,58 @@ def save_check_to_db(user_id: int, content: str, is_fake: bool, trust_score: int
 async def cmd_start(message: types.Message):
     """Хэндлер для команды /start"""
     welcome_text = (
-        "Привет! 👋 Я — фактчекер проекта «AuraChecker».\n\n"
-        "Отправьте мне любую сомнительную новость (текст), и я проверю её на дезинформацию.\n"
-        "Или отправьте мне фотографию, и я проверю её на дипфейк!"
+        "👁️‍🗨️ **Добро пожаловать в DeepCheck!**\n\n"
+        "Я — ваш персональный AI-фактчекер. Моя задача — защитить вас от дезинформации и дипфейков.\n\n"
+        "🔹 Отправьте **текст** (новость, слух), и я проверю его достоверность.\n"
+        "🔹 Отправьте **фотографию**, и я выявлю следы ИИ-генерации или фотомонтажа.\n\n"
+        "Используйте команду /help для получения инструкций."
     )
-    await message.answer(welcome_text)
+    await message.answer(welcome_text, parse_mode="Markdown")
+
+@dp.message(Command("help"))
+async def cmd_help(message: types.Message):
+    """Хэндлер для команды /help"""
+    help_text = (
+        "🛡️ **Справка системы DeepCheck**\n\n"
+        "**Как пользоваться:**\n"
+        "1. Просто перешлите мне подозрительное сообщение или отправьте картинку.\n"
+        "2. Я проанализирую данные и выдам вердикт с **уровнем доверия (от 0% до 100%)**.\n\n"
+        "**Что означают результаты:**\n"
+        "🟢 **Правда** — контент выглядит достоверным.\n"
+        "🟡 **Неоднозначно** — есть сомнения, проверьте первоисточники.\n"
+        "🟠 **Манипуляция** — полуправда или кликбейт.\n"
+        "🔴 **Фейк / Дипфейк** — 100% обман или сгенерировано ИИ.\n\n"
+        "Узнать статистику проекта: /stats"
+    )
+    await message.answer(help_text, parse_mode="Markdown")
+
+@dp.message(Command("stats"))
+async def cmd_stats(message: types.Message):
+    """Хэндлер для команды /stats"""
+    user_id = message.from_user.id
+    
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT COUNT(*) FROM checks")
+    total_checks = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM checks WHERE is_fake=1")
+    total_fakes = cursor.fetchone()[0]
+    
+    cursor.execute("SELECT COUNT(*) FROM checks WHERE user_id=?", (user_id,))
+    user_checks = cursor.fetchone()[0]
+    
+    conn.close()
+    
+    stats_text = (
+        "📊 **Глобальная статистика DeepCheck**\n\n"
+        f"🌐 Всего запросов обработано: **{total_checks}**\n"
+        f"🚨 Фейков обнаружено: **{total_fakes}**\n\n"
+        f"👤 Ваша личная активность: **{user_checks}** проверок\n\n"
+        "Спасибо, что помогаете делать интернет чище! 👁️‍🗨️"
+    )
+    await message.answer(stats_text, parse_mode="Markdown")
 
 @dp.message(F.text)
 async def handle_text_message(message: types.Message):
@@ -102,7 +149,7 @@ async def handle_text_message(message: types.Message):
         
         # Формирование ответа
         if trust_score >= 80:
-            status_emoji = "🟢 ПРАВДА"
+            status_emoji = "🟢 ДОСТОВЕРНО"
         elif trust_score >= 50:
             status_emoji = "🟡 ВЕРОЯТНО ПРАВДА / НЕОДНОЗНАЧНО"
         elif trust_score >= 20:
@@ -111,9 +158,9 @@ async def handle_text_message(message: types.Message):
             status_emoji = "🔴 ФЕЙК"
             
         reply_text = (
-            f"**Вердикт:** {status_emoji}\n"
-            f"**Уровень доверия:** {trust_score}%\n\n"
-            f"💡 **Объяснение:** {explanation}"
+            f"👁️‍🗨️ **Вердикт DeepCheck:** {status_emoji}\n"
+            f"📊 **Индекс доверия:** {trust_score}%\n\n"
+            f"💡 **Анализ:** {explanation}"
         )
         
         if search_query:
@@ -202,10 +249,10 @@ async def handle_photo_message(message: types.Message):
         save_check_to_db(user_id, f"IMAGE:{filename}", is_fake, trust_score, explanation)
             
         reply_text = (
-            f"**Вердикт по фото:** {status_emoji}\n"
-            f"**Уровень доверия:** {trust_score}%\n\n"
-            f"🤖 **ИИ-генерация:** {ai_percent}% вероятность\n"
-            f"🎭 **Дипфейк (лица):** {deepfake_percent}% вероятность\n\n"
+            f"👁️‍🗨️ **Вердикт DeepCheck:** {status_emoji}\n"
+            f"📊 **Индекс доверия:** {trust_score}%\n\n"
+            f"🤖 ИИ-генерация: {ai_percent}%\n"
+            f"🎭 Дипфейк (лица): {deepfake_percent}%\n\n"
             f"💡 **Анализ:** {explanation}"
         )
         
@@ -216,6 +263,11 @@ async def handle_photo_message(message: types.Message):
         await processing_msg.edit_text("❌ Произошла ошибка при анализе фотографии.")
 
 async def main():
+    print("\n" + "="*60)
+    print("👁️‍🗨️ Бот DeepCheck успешно запущен в кибер-режиме!")
+    print("🧠 Используемые API: Gemini 2.5 + Sightengine")
+    print("💡 Убедитесь, что Flask сервер (app.py) также запущен для дашборда.")
+    print("="*60 + "\n")
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 

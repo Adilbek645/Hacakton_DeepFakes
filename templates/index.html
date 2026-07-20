@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AuraChecker Дашборд 🌟</title>
+    <title>DeepCheck — AI Платформа Фактчекинга 👁️‍🗨️</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
     <div class="container">
-        <h1 class="aura-title">✨ AuraChecker</h1>
-        <p class="subtitle">Мониторинг пользовательской ауры</p>
+        <h1 class="deepcheck-title">👁️‍🗨️ DeepCheck — Платформа Фактчекинга</h1>
+        <p class="subtitle">Центр мониторинга ИИ-угроз, дезинформации и дипфейков в реальном времени.</p>
         
         <main class="table-container">
             <table>
@@ -28,9 +28,9 @@
                     <tr>
                         <td style="color: var(--text-secondary);">#{{ check.id }}</td>
                         <td style="color: var(--text-secondary); font-size: 14px;">{{ check.timestamp }}</td>
-                        <td style="font-weight: 500; line-height: 1.5;">
+                        <td style="font-weight: 500; line-height: 1.5; color: var(--text-primary);">
                             {% if check.content.startswith('IMAGE:') %}
-                                <img src="/media/{{ check.content[6:] }}" alt="User Image" style="max-width: 150px; border-radius: 8px;">
+                                <img src="/media/{{ check.content[6:] }}" alt="User Image" style="max-width: 150px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
                             {% else %}
                                 {{ check.content }}
                             {% endif %}
@@ -48,7 +48,9 @@
                                 </span>
                             {% endif %}
                         </td>
-                        <td><strong>{{ check.trust_score }}</strong></td>
+                        <td style="font-weight: bold; font-size: 16px; color: {% if check.trust_score >= 50 %}var(--color-true){% else %}var(--color-fake){% endif %};">
+                            {{ check.trust_score }}%
+                        </td>
                         <td style="color: var(--text-secondary); font-size: 14px; line-height: 1.5;">{{ check.explanation }}</td>
                     </tr>
                     {% else %}

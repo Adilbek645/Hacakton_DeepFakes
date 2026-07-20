@@ -16,22 +16,21 @@ function spawnEmoji(emoji, rect) {
   }, 4000);
 }
 
-// Отправка текстов пачкой на локальный сервер (app.py)
+// Отправка текстов пачкой через background.js (обход CORS и Mixed Content)
 async function analyzeBatch(texts) {
-    try {
-        const response = await fetch('http://localhost:5000/api/analyze_batch', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ texts: texts })
-        });
-        if (!response.ok) return null;
-        return await response.json();
-    } catch (e) {
-        console.error("Ошибка при связи с сервером Emotional Filter:", e);
-        return null;
-    }
+    return new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+            { action: "analyzeBatch", texts: texts },
+            (response) => {
+                if (chrome.runtime.lastError || !response || !response.success) {
+                    console.error("Ошибка при связи с сервером через background:", chrome.runtime.lastError || (response && response.error));
+                    resolve(null);
+                } else {
+                    resolve(response.data);
+                }
+            }
+        );
+    });
 }
 
 // Запуск сканирования страницы

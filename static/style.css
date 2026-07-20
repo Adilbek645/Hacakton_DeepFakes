@@ -1,15 +1,16 @@
 /* Подключаем современный шрифт Inter (как в дизайн-концепте) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
 :root {
-    /* Цветовая палитра из концепции */
-    --bg-color: #F9FAFB;
-    --card-bg: #FFFFFF;
-    --text-primary: #1F2937;
-    --text-secondary: #6B7280;
+    /* Неоновая Киберпанк Палитра "Көз" */
+    --bg-color: #0A0F1A;
+    --card-bg: #121826;
+    --text-primary: #E2E8F0;
+    --text-secondary: #94A3B8;
     
-    --color-true: #10B981;
-    --color-fake: #EF4444;
+    --color-true: #00F0FF; /* Neon Cyan */
+    --color-fake: #FF0055; /* Neon Pink/Red */
+    --accent: #00F0FF;
 }
 
 body {
@@ -28,15 +29,16 @@ body {
     padding: 40px 20px;
 }
 
-.aura-title {
-    font-size: 38px;
+.deepcheck-title {
+    font-size: 42px;
     font-weight: 800;
     margin-bottom: 8px;
     letter-spacing: -0.5px;
-    background: linear-gradient(90deg, #8a2be2, #ff007f, #8a2be2);
+    background: linear-gradient(90deg, #00F0FF, #3B82F6, #00F0FF);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
     animation: shine 3s linear infinite;
 }
 
@@ -57,7 +59,8 @@ body {
 .table-container {
     background-color: var(--card-bg);
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.05);
     overflow: hidden;
 }
 
@@ -68,7 +71,7 @@ table {
 }
 
 thead {
-    background-color: #F3F4F6;
+    background-color: #1A2235;
     color: var(--text-secondary);
     font-size: 13px;
     text-transform: uppercase;
@@ -78,7 +81,7 @@ thead {
 
 th, td {
     padding: 16px 24px;
-    border-bottom: 1px solid #E5E7EB;
+    border-bottom: 1px solid #1E293B;
     vertical-align: middle;
 }
 
@@ -91,7 +94,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-    background-color: #F9FAFB; /* Эффект наведения */
+    background-color: #1A2235; /* Эффект наведения */
 }
 
 /* Беджи для статусов */
@@ -103,16 +106,21 @@ tbody tr:hover {
     font-weight: 600;
     font-size: 14px;
     gap: 6px;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
 .status-fake {
-    background-color: #FEE2E2;
+    background-color: rgba(255, 0, 85, 0.15);
     color: var(--color-fake);
+    border: 1px solid rgba(255, 0, 85, 0.3);
+    box-shadow: 0 0 10px rgba(255, 0, 85, 0.1);
 }
 
 .status-true {
-    background-color: #D1FAE5;
+    background-color: rgba(0, 240, 255, 0.15);
     color: var(--color-true);
+    border: 1px solid rgba(0, 240, 255, 0.3);
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
 }
 
 .empty-state {
