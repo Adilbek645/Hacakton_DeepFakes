@@ -183,15 +183,20 @@ def analyze_batch():
         prompt += "Отвечай СТРОГО в формате JSON массива (list of objects), где каждый объект имеет ключи: is_fake (boolean), trust_score (integer 0-100, 100=полностью безопасно) и explanation (краткая строка). Порядок элементов в массиве должен СТРОГО соответствовать переданному списку текстов."
         
         response = batch_model.generate_content(prompt)
+        print(f"Raw Gemini response: {response.text}")
         try:
             result = json.loads(response.text)
         except json.JSONDecodeError:
-            # Fallback if Gemini outputs malformed JSON
-            import re
-            cleaned_text = re.sub(r'```(?:json)?\n?(.*?)\n?```', r'\1', response.text, flags=re.DOTALL)
-            try:
-                result = json.loads(cleaned_text)
-            except Exception:
+            # Fallback if Gemini outputs malformed JSON or extra text
+            text = response.text
+            start = text.find('[')
+            end = text.rfind(']')
+            if start != -1 and end != -1:
+                try:
+                    result = json.loads(text[start:end+1])
+                except Exception:
+                    result = [{"is_fake": False, "trust_score": 100, "explanation": "Ошибка генерации JSON у нейросети"} for _ in texts]
+            else:
                 result = [{"is_fake": False, "trust_score": 100, "explanation": "Ошибка генерации JSON у нейросети"} for _ in texts]
                 
         return jsonify(result)
