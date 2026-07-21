@@ -150,20 +150,13 @@ def analyze_text():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-<<<<<<< HEAD
-@app.route('/api/analyze_batch', methods=['POST'])
-def analyze_batch():
-    if not batch_model:
-=======
 # Глобальная переменная для кулдауна API (защита от спама вкладками)
 quota_reset_time = 0
 
-@app.route('/api/analyze_batch', methods=['POST', 'OPTIONS'])
+@app.route('/api/analyze_batch', methods=['POST'])
 def analyze_batch():
     global quota_reset_time
-    if request.method == 'OPTIONS':
-        return '', 200
-        
+    
     current_time = time.time()
     if current_time < quota_reset_time:
         return jsonify({
@@ -171,8 +164,7 @@ def analyze_batch():
             "message": f"Global cooldown. Please wait {int(quota_reset_time - current_time)}s"
         }), 429
         
-    if not model:
->>>>>>> be15044a33d676e9c6da0ece6eed380ddb36a0f5
+    if not batch_model:
         return jsonify({"error": "Gemini API key not configured"}), 500
         
     data = request.json
@@ -190,7 +182,6 @@ def analyze_batch():
             
         prompt += "Отвечай СТРОГО в формате JSON массива (list of objects), где каждый объект имеет ключи: is_fake (boolean), trust_score (integer 0-100, 100=полностью безопасно) и explanation (краткая строка). Порядок элементов в массиве должен СТРОГО соответствовать переданному списку текстов."
         
-<<<<<<< HEAD
         response = batch_model.generate_content(prompt)
         try:
             result = json.loads(response.text)
@@ -204,19 +195,6 @@ def analyze_batch():
                 result = [{"is_fake": False, "trust_score": 100, "explanation": "Ошибка генерации JSON у нейросети"} for _ in texts]
                 
         return jsonify(result)
-=======
-        response = model.generate_content(prompt)
-        try:
-            result = json.loads(response.text)
-            return jsonify(result)
-        except json.JSONDecodeError as e:
-            import traceback
-            traceback.print_exc()
-            return jsonify({
-                "error": "Invalid JSON returned from Gemini API",
-                "parse_error": str(e),
-                "raw_response": response.text
-            }), 502
     except ResourceExhausted as e:
         import traceback
         traceback.print_exc()
@@ -225,7 +203,6 @@ def analyze_batch():
             "error": "Gemini quota exceeded",
             "message": str(e)
         }), 429
->>>>>>> be15044a33d676e9c6da0ece6eed380ddb36a0f5
     except Exception as e:
         import traceback
         traceback.print_exc()
