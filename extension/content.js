@@ -21,6 +21,12 @@ function spawnEmoji(emoji, rect) {
 // Отправка текстов пачкой через background.js
 async function analyzeBatch(texts) {
     return new Promise((resolve) => {
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+            console.warn("⚠️ Контекст расширения потерян (возможно, оно было перезагружено). Обновите страницу!");
+            resolve(null);
+            return;
+        }
+        
         chrome.runtime.sendMessage(
             { action: "analyzeBatch", texts: texts },
             (response) => {
@@ -68,8 +74,10 @@ async function scanPage() {
     if (results && Array.isArray(results) && results.length === targetElements.length) {
         targetElements.forEach((el, index) => {
             const result = results[index];
-            if (result && result.is_fake) {
+            if (result && (result.is_fake || result.trust_score < 60)) {
                 const wrapper = document.createElement('span');
+                
+                // Если меньше 30 - красный, иначе - желтый
                 wrapper.className = result.trust_score < 30 ? 'emo-filter-aggression' : 'emo-filter-fake';
                 wrapper.innerHTML = el.innerHTML;
                 
@@ -84,7 +92,14 @@ async function scanPage() {
                 setTimeout(() => {
                     const rect = wrapper.getBoundingClientRect();
                     if (rect.width > 0 && rect.height > 0) {
-                        const emoji = result.trust_score < 30 ? '🚩' : '🤡';
+                        let emoji = '🤡'; // По умолчанию для желтого (фейк)
+                        
+                        if (result.trust_score < 30) {
+                            emoji = '🚩'; // Красный (агрессия/жесткий фейк)
+                        } else if (!result.is_fake && result.trust_score < 60) {
+                            emoji = '⚠️'; // Желтый (низкое доверие, но не 100% фейк)
+                        }
+                        
                         spawnEmoji(emoji, rect);
                     }
                 }, 500);
