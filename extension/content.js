@@ -1,3 +1,5 @@
+console.log("🚀 Эмоциональный фильтр загружен на страницу!");
+
 // Функция для спавна эмодзи
 function spawnEmoji(emoji, rect) {
   const emojiEl = document.createElement('div');
@@ -47,7 +49,11 @@ async function scanPage() {
         })
         .slice(0, 10);
 
-    if (targetElements.length === 0) return;
+    if (targetElements.length === 0) {
+        console.log("⚠️ Не найдено подходящих текстовых блоков для анализа.");
+        return;
+    }
+    console.log(`🔍 Отправлено на анализ блоков: ${targetElements.length}`);
 
     // Помечаем как проверенные
     targetElements.forEach(el => el.dataset.emoChecked = "true");
@@ -57,6 +63,7 @@ async function scanPage() {
     
     // Делаем ОДИН пакетный запрос (batch) к API, чтобы экономить жесткие лимиты Google
     const results = await analyzeBatch(texts);
+    console.log("📊 Ответ от сервера:", results);
 
     if (results && Array.isArray(results) && results.length === targetElements.length) {
         targetElements.forEach((el, index) => {
@@ -94,7 +101,11 @@ async function scanPage() {
     }
 }
 
-// Запускаем через секунду после загрузки, чтобы дать сайту отрисоваться
-window.addEventListener('load', () => {
-    setTimeout(scanPage, 1000);
-});
+// Запускаем сканирование
+function startScanning() {
+    setTimeout(scanPage, 2000); // Первый запуск чуть позже
+    setInterval(scanPage, 20000); // Регулярные запуски каждые 20 секунд (чтобы не превышать лимиты Gemini)
+}
+
+// Запускаем сразу (расширения обычно грузятся после загрузки DOM)
+startScanning();

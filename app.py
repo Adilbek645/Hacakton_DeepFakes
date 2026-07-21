@@ -54,8 +54,19 @@ if GEMINI_API_KEY:
             "\"explanation\": \"Краткое объяснение (1-2 предложения), в чем заключается манипуляция или почему текст нормальный.\"}"
         )
     )
+    
+    batch_model = genai.GenerativeModel(
+        model_name="gemini-flash-latest",
+        generation_config=generation_config,
+        safety_settings=safety_settings,
+        system_instruction=(
+            "Ты — детектор манипуляций и дезинформации. "
+            "Отвечай СТРОГО в формате JSON массива (list of objects)."
+        )
+    )
 else:
     model = None
+    batch_model = None
 
 DB_NAME = "hackathon.db"
 
@@ -117,12 +128,8 @@ def serve_media(filename):
         print(f"Error processing media with PIL: {e}")
         return "Error processing media", 500
 
-@app.route('/api/analyze', methods=['POST', 'OPTIONS'])
+@app.route('/api/analyze', methods=['POST'])
 def analyze_text():
-    # Обработка preflight-запроса от браузера
-    if request.method == 'OPTIONS':
-        return '', 200
-        
     if not model:
         return jsonify({"error": "Gemini API key not configured"}), 500
         
@@ -141,12 +148,9 @@ def analyze_text():
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/analyze_batch', methods=['POST', 'OPTIONS'])
+@app.route('/api/analyze_batch', methods=['POST'])
 def analyze_batch():
-    if request.method == 'OPTIONS':
-        return '', 200
-        
-    if not model:
+    if not batch_model:
         return jsonify({"error": "Gemini API key not configured"}), 500
         
     data = request.json
@@ -164,8 +168,18 @@ def analyze_batch():
             
         prompt += "Отвечай СТРОГО в формате JSON массива (list of objects), где каждый объект имеет ключи: is_fake (boolean), trust_score (integer 0-100, 100=полностью безопасно) и explanation (краткая строка). Порядок элементов в массиве должен СТРОГО соответствовать переданному списку текстов."
         
-        response = model.generate_content(prompt)
-        result = json.loads(response.text)
+        response = batch_model.generate_content(prompt)
+        try:
+            result = json.loads(response.text)
+        except json.JSONDecodeError:
+            # Fallback if Gemini outputs malformed JSON
+            import re
+            cleaned_text = re.sub(r'```(?:json)?\n?(.*?)\n?```', r'\1', response.text, flags=re.DOTALL)
+            try:
+                result = json.loads(cleaned_text)
+            except Exception:
+                result = [{"is_fake": False, "trust_score": 100, "explanation": "Ошибка генерации JSON у нейросети"} for _ in texts]
+                
         return jsonify(result)
     except Exception as e:
         import traceback
